@@ -1,0 +1,15 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+main
+
+# Config (Sensitive)
+config.yaml
+
+# IDE
+.idea/
+.vscode/
