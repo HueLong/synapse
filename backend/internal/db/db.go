@@ -23,7 +23,7 @@ func InitDB() {
 	}
 
 	// 自动迁移
-	err = database.AutoMigrate(&model.Question{}, &model.Category{}, &model.User{})
+	err = database.AutoMigrate(&model.Topic{}, &model.Question{}, &model.Category{}, &model.User{})
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

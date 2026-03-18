@@ -19,6 +19,7 @@ func SetupRouter() *gin.Engine {
 		v1.POST("/question/detail", handler.GetQuestionDetail)
 		v1.POST("/categories", handler.GetCategories)
 		v1.GET("/stats", handler.NewStatsHandler().GetHomeStats)
+		v1.GET("/topics/:id/questions", handler.GetTopicQuestions)
 	}
 
 	// Protected Routes

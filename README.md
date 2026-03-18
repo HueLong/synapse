@@ -16,7 +16,6 @@
 | 沉浸式刷题 (Spotlight UI) | 学习数据仪表盘 (Dashboard) |
 |:---:|:---:|
 | ![Home Preview](./frontend/assets/preview-home.png) | ![Stats Preview](./frontend/assets/preview-stats.png) |
-*(建议替换为你的实际项目截图，GIF 效果最佳)*
 
 ## ✨ 核心特性 (Features)
 

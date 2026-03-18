@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import QuestionDetail from './pages/QuestionDetail'
 import EditQuestion from './pages/Admin/EditQuestion'
 import LoginModal from './components/LoginModal'
+import TopicPath from './components/TopicPath'
 import { AuthProvider } from './context/AuthContext'
 
 const PrivateRoute = ({ children }) => {
@@ -25,6 +26,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/category/:categoryId" element={<Home />} />
           <Route path="/question/:id" element={<QuestionDetail />} />
+          <Route path="/topic/:id" element={<TopicPath />} />
         </Route>
 
         {/* Admin Routes */}

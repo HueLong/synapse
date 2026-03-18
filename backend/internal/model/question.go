@@ -20,4 +20,6 @@ type Question struct {
 	ReviewCount    int        `gorm:"type:int;not null;default:0" json:"review_count"`   // 复习次数
 	LastReviewedAt *time.Time `gorm:"default:null" json:"last_reviewed_at"`              // 上次复习时间
 	NextReviewAt   *time.Time `gorm:"default:null" json:"next_review_at"`                // 下次复习时间
+	TopicID        *uint      `gorm:"index;default:null" json:"topic_id"`                // 关联到 Topic
+	Sequence       int        `gorm:"not null;default:0" json:"sequence"`                // 题目在题单中的建议顺序
 }
