@@ -1,119 +1,231 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PlayCircleOutlined } from '@ant-design/icons';
+import {
+    BookOutlined,
+    QuestionCircleOutlined,
+    CodeOutlined,
+    PlayCircleOutlined,
+    LockOutlined
+} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import CardDetailDrawer from './CardDetailDrawer';
 
-interface Question {
-    ID: number;
+// --- Types ---
+type CardType = 'concept' | 'qa' | 'algorithm';
+
+interface CardNode {
+    id: number;
+    type: CardType;
     title: string;
-    difficulty: number;
+    summary?: string;
+    difficulty?: 'Easy' | 'Medium' | 'Hard';
     sequence: number;
+    isLocked?: boolean;
 }
 
-interface Topic {
-    ID: number;
-    name: string;
+interface TopicInfo {
+    id: number;
+    title: string;
     description: string;
+    mode: 'discrete' | 'path';
 }
 
-interface TopicPathProps {
-    topic?: Topic;
-    questions?: Question[];
-}
+// --- Mock Data ---
+const mockTopic: TopicInfo = {
+    id: 1,
+    title: "二叉树核心套路",
+    description: "从节点遍历到序列化，深度拆解二叉树的递归哲学与迭代技巧，打通任督二脉。",
+    mode: 'path'
+};
 
-const getDifficultyBadge = (difficulty: number) => {
-    switch (difficulty) {
-        case 1:
-            return <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">简单</span>;
-        case 2:
-            return <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">中等</span>;
-        case 3:
-            return <span className="px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">困难</span>;
-        default:
-            return <span className="px-2 py-1 text-xs font-semibold bg-slate-100 text-slate-800 rounded-full">未知</span>;
+const mockCards: CardNode[] = [
+    {
+        id: 101,
+        type: "concept",
+        title: "二叉树的底层递归结构",
+        summary: "理解前、中、后序遍历的递归本质就是代码在节点执行的时机不同。",
+        sequence: 10,
+        isLocked: false,
+    },
+    {
+        id: 102,
+        type: "qa",
+        title: "为什么递归遍历的空间复杂度是 O(h)？",
+        summary: "很多时候容易把时间复杂度和空间复杂度搞混，快来翻开盲盒检验一下。",
+        sequence: 20,
+        isLocked: false,
+    },
+    {
+        id: 103,
+        type: "algorithm",
+        title: "二叉树的层序遍历 (LeetCode 102)",
+        difficulty: "Medium",
+        sequence: 30,
+        isLocked: false,
+    },
+    {
+        id: 104,
+        type: "concept",
+        title: "序列化与反序列化思维",
+        summary: "将二维的树结构降维打击，变成一维的字符串。",
+        sequence: 40,
+        isLocked: true,
+    },
+    {
+        id: 105,
+        type: "algorithm",
+        title: "二叉树的最近公共祖先 (LeetCode 236)",
+        difficulty: "Hard",
+        sequence: 50,
+        isLocked: true,
+    }
+];
+
+// --- Helpers ---
+const getTypeConfig = (type: CardType) => {
+    switch (type) {
+        case 'concept':
+            return { icon: <BookOutlined />, label: '概念', color: 'bg-emerald-100 text-emerald-600', border: 'border-emerald-200 hover:border-emerald-400' };
+        case 'qa':
+            return { icon: <QuestionCircleOutlined />, label: '问答', color: 'bg-amber-100 text-amber-600', border: 'border-amber-200 hover:border-amber-400' };
+        case 'algorithm':
+            return { icon: <CodeOutlined />, label: '算法', color: 'bg-blue-100 text-blue-600', border: 'border-blue-200 hover:border-blue-400' };
     }
 };
 
-const STAGGER_DELAY = 0.15;
+const getDifficultyBadge = (difficulty?: string) => {
+    switch (difficulty) {
+        case 'Easy':
+            return <span className="px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-800 rounded-md">简单</span>;
+        case 'Medium':
+            return <span className="px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-md">中等</span>;
+        case 'Hard':
+            return <span className="px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-800 rounded-md">困难</span>;
+        default:
+            return null;
+    }
+};
 
+// --- Animations ---
 const containerVariants = {
     hidden: { opacity: 0 },
     show: {
         opacity: 1,
-        transition: {
-            staggerChildren: STAGGER_DELAY
-        }
+        transition: { staggerChildren: 0.15 }
     }
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    hidden: { opacity: 0, x: -20, y: 10 },
+    show: { opacity: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 250, damping: 20 } }
 };
 
-const TopicPath: React.FC<TopicPathProps> = ({ topic, questions }) => {
+// --- Component ---
+const TopicPath: React.FC = () => {
     const navigate = useNavigate();
-
-    // Mock Data Fallback
-    const displayTopic = topic || { ID: 1, name: "二叉树专项", description: "从零开始掌握二叉树的核心算法，层层递进！" };
-    const displayQuestions = questions && questions.length > 0 ? questions : [
-        { ID: 101, title: "二叉树的最大深度", difficulty: 1, sequence: 10 },
-        { ID: 102, title: "翻转二叉树", difficulty: 1, sequence: 20 },
-        { ID: 103, title: "对称二叉树", difficulty: 1, sequence: 30 },
-        { ID: 104, title: "二叉树的层序遍历", difficulty: 2, sequence: 40 },
-        { ID: 105, title: "二叉树的最近公共祖先", difficulty: 2, sequence: 50 },
-    ];
+    const [activeCard, setActiveCard] = useState<CardNode | null>(null);
 
     return (
-        <div className="max-w-3xl mx-auto py-12 px-6">
-            <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-12 text-center"
-            >
-                <h1 className="text-4xl font-extrabold text-slate-800 tracking-tight mb-4">{displayTopic.name}</h1>
-                <p className="text-lg text-slate-500">{displayTopic.description}</p>
-            </motion.div>
+        <div className="min-h-screen bg-slate-50/50 py-6 px-4 sm:px-8">
+            <div className="max-w-3xl mx-auto">
+                {/* Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-16 text-center"
+                >
+                    <div className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-widest text-indigo-600 uppercase bg-indigo-100 rounded-full">
+                        路线图模式 (Path Mode)
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-800 tracking-tight mb-4 drop-shadow-sm">
+                        {mockTopic.title}
+                    </h1>
+                    <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                        {mockTopic.description}
+                    </p>
+                </motion.div>
 
-            <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="show"
-                className="relative border-l-4 border-indigo-100 ml-6 md:ml-12"
-            >
-                {displayQuestions.map((q, index) => (
-                    <motion.div 
-                        key={q.ID}
-                        variants={itemVariants}
-                        className="mb-10 ml-8 relative group"
-                    >
-                        {/* Timeline Node / Circle */}
-                        <div className="absolute -left-[45px] top-1 w-8 h-8 rounded-full bg-white border-4 border-indigo-500 flex items-center justify-center shadow-md group-hover:scale-110 group-hover:border-violet-500 transition-all z-10">
-                            <span className="text-xs font-bold text-indigo-600 group-hover:text-violet-600">{index + 1}</span>
-                        </div>
+                {/* Timeline */}
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="relative pl-8 md:pl-0"
+                >
+                    {/* Central Line for Desktop, Left Line for Mobile */}
+                    <div className="absolute left-4 md:left-1/2 top-4 bottom-4 w-0.5 bg-slate-200 transform md:-translate-x-1/2" />
 
-                        {/* Content Card */}
-                        <div 
-                            onClick={() => navigate(`/question/${q.ID}`)}
-                            className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                        >
-                            <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                    {getDifficultyBadge(q.difficulty)}
-                                    <span className="text-xs font-medium text-slate-400">Step {q.sequence}</span>
+                    {mockCards.map((card, index) => {
+                        const typeConfig = getTypeConfig(card.type);
+                        const isEven = index % 2 === 0;
+
+                        return (
+                            <motion.div
+                                key={card.id}
+                                variants={itemVariants}
+                                className={`relative flex items-center mb-12 w-full md:justify-between ${isEven ? 'md:flex-row-reverse' : ''}`}
+                            >
+                                {/* Timeline Dot */}
+                                <div className="absolute left-0 md:left-1/2 w-8 h-8 rounded-full bg-white border-4 border-slate-200 transform -translate-x-1/2 shadow-sm flex items-center justify-center z-10 transition-colors duration-300">
+                                    {card.isLocked ? (
+                                        <LockOutlined className="text-slate-400 text-[10px]" />
+                                    ) : (
+                                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                                    )}
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
-                                    {q.title}
-                                </h3>
-                            </div>
-                            
-                            <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-indigo-50 text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                                <PlayCircleOutlined className="text-xl" />
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
-            </motion.div>
+
+                                {/* Spacer for Timeline Alignment (Desktop) */}
+                                <div className="hidden md:block md:w-5/12" />
+
+                                {/* Card Content */}
+                                <div className="w-full pl-6 md:pl-0 md:w-5/12">
+                                    <div
+                                        onClick={() => !card.isLocked && setActiveCard(card)}
+                                        className={`
+                                            relative bg-white p-6 rounded-2xl shadow-sm border ${typeConfig.border}
+                                            transition-all duration-300
+                                            ${card.isLocked ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'hover:shadow-lg hover:-translate-y-1 cursor-pointer'}
+                                            group
+                                        `}
+                                    >
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`flex items-center justify-center w-6 h-6 rounded-md ${typeConfig.color}`}>
+                                                    {typeConfig.icon}
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-500">{typeConfig.label}</span>
+                                            </div>
+                                            {getDifficultyBadge(card.difficulty)}
+                                        </div>
+
+                                        <h3 className={`text-lg font-bold mb-2 transition-colors ${card.isLocked ? 'text-slate-600' : 'text-slate-800 group-hover:text-indigo-600'}`}>
+                                            {card.title}
+                                        </h3>
+
+                                        {card.summary && (
+                                            <p className="text-sm text-slate-500 leading-relaxed line-clamp-2">
+                                                {card.summary}
+                                            </p>
+                                        )}
+
+                                        {!card.isLocked && (
+                                            <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500">
+                                                <PlayCircleOutlined className="text-xl" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </motion.div>
+            </div>
+
+            <CardDetailDrawer 
+                isOpen={!!activeCard}
+                onClose={() => setActiveCard(null)}
+                card={activeCard}
+            />
         </div>
     );
 };

@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import Home from './pages/Home'
 import QuestionDetail from './pages/QuestionDetail'
-import EditQuestion from './pages/Admin/EditQuestion'
+import AdminStudio from './pages/AdminStudio'
 import LoginModal from './components/LoginModal'
 import TopicPath from './components/TopicPath'
 import { AuthProvider } from './context/AuthContext'
@@ -32,12 +32,12 @@ function App() {
         {/* Admin Routes */}
         <Route path="/admin/questions/new" element={
           <PrivateRoute>
-            <EditQuestion />
+            <AdminStudio />
           </PrivateRoute>
         } />
         <Route path="/admin/questions/edit/:id" element={
           <PrivateRoute>
-            <EditQuestion />
+            <AdminStudio />
           </PrivateRoute>
         } />
 
