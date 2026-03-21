@@ -1,5 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { MdPreview } from 'md-editor-rt';
+import 'md-editor-rt/lib/preview.css';
 
 export const AlgoView = ({ card }: { card: any }) => {
     return (
@@ -22,27 +24,24 @@ export const AlgoView = ({ card }: { card: any }) => {
                 </div>
 
                 {/* Problem Description */}
-                <div className="prose prose-slate prose-lg max-w-none">
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">题目描述</h3>
-                    <p className="text-slate-700 leading-relaxed font-medium">
-                        {card.problemDescription || "给定一个二叉树的根节点 root ，返回其节点值的层序遍历。（即逐层地，从左到右访问所有节点）。"}
-                    </p>
-                    
-                    {/* Examples */}
-                    <h3 className="text-xl font-bold text-slate-800 mt-10 mb-4 border-b border-slate-100 pb-2">输入输出示例</h3>
-                    <div className="bg-slate-900 rounded-2xl p-6 shadow-md border-t-4 border-blue-500 overflow-x-auto">
-                        <pre className="text-blue-100 font-mono text-sm leading-loose whitespace-pre-wrap"><code>
-{card.example || `输入：root = [3,9,20,null,null,15,7]
-输出：[[3],[9,20],[15,7]]
-
-输入：root = [1]
-输出：[[1]]
-
-输入：root = []
-输出：[]`}
-                        </code></pre>
-                    </div>
+                <div className="border-b border-slate-100 pb-2 mb-2">
+                    <h3 className="text-xl font-bold text-slate-800 px-4">题目描述</h3>
                 </div>
+                <div className="w-full">
+                    <MdPreview modelValue={card.problemDescription || card.content || "暂无题目描述"} editorId={`algo-desc-${card.id}`} />
+                </div>
+                
+                {/* Examples */}
+                {(card.example || card.answer) && (
+                    <div className="mt-8">
+                        <div className="border-b border-slate-100 pb-2 mb-2">
+                            <h3 className="text-xl font-bold text-slate-800 px-4">示例与解答</h3>
+                        </div>
+                        <div className="bg-slate-900 rounded-2xl p-6 shadow-md border-t-4 border-blue-500 overflow-x-auto w-full mt-4">
+                            <MdPreview theme="dark" modelValue={card.example || card.answer || ""} editorId={`algo-ans-${card.id}`} />
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="p-6 bg-slate-50 border-t border-slate-100 mt-auto">

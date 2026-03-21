@@ -2,10 +2,11 @@ package dto
 
 import "time"
 
-// QuestionListItem 列表项DTO，不包含内容和答案
-type QuestionListItem struct {
+// CardListItem 列表项DTO
+type CardListItem struct {
 	ID           uint       `json:"id"`
 	Title        string     `json:"title"`
+	CardType     string     `json:"card_type"`
 	CategoryName string     `json:"category"`
 	Difficulty   int8       `json:"difficulty"`
 	Views        int        `json:"views"`
@@ -13,12 +14,14 @@ type QuestionListItem struct {
 	NextReviewAt *time.Time `json:"next_review_at"`
 }
 
-// QuestionDetail 详情DTO，包含所有信息
-type QuestionDetail struct {
+// CardDetail 详情DTO
+type CardDetail struct {
 	ID           uint      `json:"id"`
 	Title        string    `json:"title"`
+	CardType     string    `json:"card_type"`
 	Content      string    `json:"content"`
 	Answer       string    `json:"answer"`
+	TopicID      *uint     `json:"topic_id"`
 	CategoryName string    `json:"category"`
 	Difficulty   int8      `json:"difficulty"`
 	Views        int       `json:"views"`

@@ -57,9 +57,13 @@ Synapse 不是一个传统的“题库”或“笔记本”，而是一个基于
 - [x] 重构 `Sidebar.tsx`，实现父子层级的树状导航。
 - [x] 开发后台管理台 `AdminStudio.tsx`，实现左侧架构树与右侧多态卡片编辑器的双栏沉浸式录入体验。
 - [x] 开发后台管理台 `AdminStudio.tsx` (创造者工作室)，包含上下文感知的树状导航与带实时预览的 Markdown 编辑器
+- [x] 深化 `AdminStudio.tsx` (创造者工作室) 的左侧结构树，支持“散装卡片”与“路线图”的混合挂载
+- [x] 重构 Go 后端 GORM 数据模型 (Models)
+
+
 
 ### 🚧 当前冲刺 (Current Sprint / In Progress)
-- [ ] 深化 `AdminStudio.tsx` (创造者工作室) 的左侧结构树，支持“散装卡片”与“路线图”的混合挂载
+- [ ] 基于 Gin 和 GORM 开发创造者工作室 (Creator Studio) 所需的 RESTful API
 
 ### ⚪ 待开发池 (Backlog / To Do)
 - [ ] 后端：Go (Gin) + GORM 实现 Topic 与 Card 的数据模型及 CRUD 接口。

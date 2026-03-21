@@ -72,7 +72,7 @@ const QuestionDetail: React.FC = () => {
     const fetchQuestionDetail = async (questionId: string, signal?: AbortSignal) => {
         setLoading(true);
         try {
-            const result: any = await request.post('/question/detail', {
+            const result: any = await request.post('/card/detail', {
                 id: Number(questionId)
             });
 

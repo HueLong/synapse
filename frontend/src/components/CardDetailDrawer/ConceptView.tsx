@@ -2,41 +2,23 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircleOutlined, CloseOutlined } from '@ant-design/icons';
 
-// 解析包含 ==关键内容== 的文本
-const renderClozeText = (text: string) => {
-    if (!text) return null;
-    const parts = text.split(/(==.*?==)/g);
-    return parts.map((part, index) => {
-        if (part.startsWith('==') && part.endsWith('==')) {
-            const content = part.slice(2, -2);
-            return <ClozeSpan key={index} content={content} />;
-        }
-        // 使用 span 包装普通文字
-        return <span key={index}>{part}</span>;
-    });
-};
-
-const ClozeSpan = ({ content }: { content: string }) => {
-    const [revealed, setRevealed] = useState(false);
-    return (
-        <span 
-            className={`
-                cursor-pointer transition-all duration-300 px-1.5 py-0.5 mx-1 rounded-md
-                ${revealed 
-                    ? 'bg-yellow-200 text-yellow-900 filter-none' 
-                    : 'bg-slate-200 text-transparent blur-[4px] hover:blur-none hover:bg-slate-300'
-                }
-            `}
-            onClick={() => setRevealed(true)}
-            title="点击揭晓"
-        >
-            {content}
-        </span>
-    );
-};
+import { MdPreview } from 'md-editor-rt';
+import 'md-editor-rt/lib/preview.css';
 
 export const ConceptView = ({ card }: { card: any }) => {
     const [isFeynmanMode, setIsFeynmanMode] = useState(false);
+
+    // Provide a simple click-to-reveal global listener for <mark> tags inside preview
+    React.useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (target.tagName.toLowerCase() === 'mark') {
+                target.classList.add('revealed');
+            }
+        };
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, []);
 
     const handleMastered = () => {
         console.log("标记为已掌握", card.id);
@@ -45,11 +27,29 @@ export const ConceptView = ({ card }: { card: any }) => {
 
     return (
         <div className="flex flex-col h-full bg-white relative">
-            <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                <div className="prose prose-slate prose-lg max-w-none leading-loose text-slate-700 font-medium">
-                    <p>
-                        {renderClozeText(card.content || "二叉树的很多算法都是基于递归模型的。在这个模型中，最重要的就是理解 ==前序遍历==、==中序遍历== 和 ==后序遍历== 的本质区别。其实，无论是哪种遍历，代码都会到达每个节点 ==三次==，而所谓的前中后序，仅仅是我们选择在哪一次到达节点时执行我们的 ==核心逻辑== 而已。")}
-                    </p>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <style>{`
+                    .concept-md-preview mark {
+                        background-color: #e2e8f0;
+                        color: transparent;
+                        filter: blur(4px);
+                        transition: all 0.3s;
+                        cursor: pointer;
+                        border-radius: 4px;
+                        padding: 0 4px;
+                        user-select: none;
+                    }
+                    .concept-md-preview mark:hover {
+                        filter: blur(2px);
+                    }
+                    .concept-md-preview mark.revealed {
+                        background-color: #fef08a;
+                        color: #713f12;
+                        filter: none;
+                    }
+                `}</style>
+                <div className="concept-md-preview">
+                    <MdPreview modelValue={card.content || card.answer || "暂无内容"} editorId={`concept-${card.id}`} />
                 </div>
             </div>
 

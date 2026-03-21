@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetTopicQuestions 根据题单ID获取该题单下的所有题目，按 Sequence 升序，然后难度升序
-func GetTopicQuestions(c *gin.Context) {
+// GetTopicCards 根据题单ID获取该题单下的所有卡片，按 Sequence 升序，然后难度升序
+func GetTopicCards(c *gin.Context) {
 	idStr := c.Param("id")
 	topicID, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -24,15 +24,14 @@ func GetTopicQuestions(c *gin.Context) {
 		return
 	}
 
-	var questions []model.Question
-	// 查询属于该TopicID的Question，按 Sequence ASC, Difficulty ASC 排序
+	var cards []model.Card
 	err = db.DB.Preload("Category").
 		Where("topic_id = ?", topicID).
 		Order("sequence asc, difficulty asc").
-		Find(&questions).Error
+		Find(&cards).Error
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询题目失败", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "查询卡片失败", "error": err.Error()})
 		return
 	}
 
@@ -40,8 +39,8 @@ func GetTopicQuestions(c *gin.Context) {
 		"code":    200,
 		"message": "获取成功",
 		"data": gin.H{
-			"topic":     topic,
-			"questions": questions,
+			"topic": topic,
+			"cards": cards,
 		},
 	})
 }

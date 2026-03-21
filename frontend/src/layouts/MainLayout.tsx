@@ -169,14 +169,26 @@ const MainLayout: React.FC = () => {
     const { user, logout, openLoginModal } = useAuth();
 
     useEffect(() => {
-        fetchSidebarData();
+        fetchCategories();
     }, []);
 
-    const fetchSidebarData = async () => {
+    const fetchCategories = async () => {
         try {
-            const categoriesResult: any = await request.post('/categories', {});
-            if (categoriesResult.code === 200) {
-                setCategories(categoriesResult.data || []);
+            const categoriesResult: any = await request.get('/tree');
+            if (categoriesResult.code === 200 && Array.isArray(categoriesResult.data)) {
+                const mappedNav = categoriesResult.data.map((cat: any) => ({
+                    id: String(cat.ID),
+                    icon: '🗂️',
+                    label: cat.name,
+                    path: `/category/${cat.ID}`,
+                    children: (cat.topics || []).map((t: any) => ({
+                        id: String(t.ID),
+                        icon: '🗺️',
+                        label: t.name,
+                        path: `/topic/${t.ID}`
+                    }))
+                }));
+                setCategories(mappedNav);
             }
         } catch (error) {
             console.error('Fetch sidebar data error:', error);
@@ -218,7 +230,7 @@ const MainLayout: React.FC = () => {
                 </SidebarGroup>
 
                 <SidebarGroup title="KNOWLEDGE BASE (知识库)">
-                    {mockKnowledgeBase.map(node => (
+                    {categories.map(node => (
                         <AccordionNavNode 
                             key={node.id} 
                             node={node} 
@@ -296,7 +308,6 @@ const MainLayout: React.FC = () => {
                     body: { padding: 0 },
                     header: { display: 'none' }
                 }}
-                width={300}
                 closable={false}
             >
                 {SidebarContent}

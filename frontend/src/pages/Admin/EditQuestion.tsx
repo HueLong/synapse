@@ -37,11 +37,11 @@ const EditQuestion = () => {
 
     const fetchCategories = async () => {
         try {
-            const res: any = await request.post('/categories', {});
+            const res: any = await request.get('/categories');
             // Check if res.data exists or if res IS the data (based on interceptor)
             // request interceptor returns response.data
             // response.data usually has { code, message, data }
-            if (res.code === 200 && res.data) {
+            if (res.code === 200 && Array.isArray(res.data)) {
                 const options = res.data.map((item: any) => ({
                     value: item.ID,
                     label: item.name
@@ -55,7 +55,7 @@ const EditQuestion = () => {
 
     const fetchQuestionDetail = async (questionId: string) => {
         try {
-            const result: any = await request.post('/question/detail', {
+            const result: any = await request.post('/card/detail', {
                 id: Number(questionId)
             });
             if (result.code === 200) {

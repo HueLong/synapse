@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import request from '../utils/request';
 import {
     FolderOutlined,
     NodeIndexOutlined,
@@ -18,7 +19,7 @@ import {
     EyeOutlined
 } from '@ant-design/icons';
 
-// --- Types & Mock Data ---
+// --- Types & Interfaces ---
 type CardType = 'concept' | 'qa' | 'algorithm' | 'category' | 'topic';
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
 type ViewMode = 'edit' | 'preview';
@@ -31,7 +32,6 @@ interface CardNode {
     question?: string;
     answer?: string;
     difficulty?: Difficulty;
-    problemDescription?: string;
 }
 
 interface TopicNode {
@@ -44,55 +44,8 @@ interface CategoryNode {
     id: string;
     title: string;
     topics: TopicNode[];
-    cards: CardNode[]; // NEW: Independent/Discrete cards under category
+    cards: CardNode[];
 }
-
-const mockTreeData: CategoryNode[] = [
-    {
-        id: 'c1',
-        title: '算法与数据结构',
-        topics: [
-            {
-                id: 't1',
-                title: '二叉树核心套路',
-                cards: [
-                    { id: 'cd1', title: '二叉树的层序遍历', type: 'algorithm', difficulty: 'Medium', content: '给你二叉树的根节点...' },
-                    { id: 'cd2', title: '二叉树的最大深度', type: 'concept', content: '递归的思路是: \n\n```python\nreturn max(maxDepth(root.left), maxDepth(root.right)) + 1\n```\n\n关键在于不要漏掉 ==空节点== 的判断。' },
-                ]
-            },
-            {
-                id: 't2',
-                title: '动态规划进阶',
-                cards: []
-            }
-        ],
-        cards: [
-            { id: 'cd_cat_1', title: '散装卡片：时间复杂度分析', type: 'qa', question: 'O(NlogN) 通常出现在什么算法中？', answer: '通常出现在 ==分治法==，如归并排序和快速排序中。' }
-        ]
-    },
-    {
-        id: 'c2',
-        title: 'Go 核心原理',
-        topics: [
-            {
-                id: 't3',
-                title: 'GMP 调度模型深剖',
-                cards: [
-                    { id: 'cd3', title: 'P 的数量由什么决定', type: 'qa', question: 'GOMAXPROCS 的作用？', answer: '决定逻辑处理器的数量' }
-                ]
-            }
-        ],
-        cards: []
-    },
-    {
-        id: 'c3',
-        title: '数据库与架构',
-        topics: [],
-        cards: [
-            { id: 'cd4', title: 'MySQL 三范式', type: 'concept', content: '1NF: 列不可再分\n2NF: ==非主键== 必须完全依赖主键\n3NF: 消除 ==传递依赖==' }
-        ]
-    }
-];
 
 // --- Helpers ---
 const renderClozeText = (text: string) => {
@@ -115,6 +68,9 @@ const renderClozeText = (text: string) => {
     });
 };
 
+const diffMaper: Record<number, Difficulty> = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
+const diffRevMaper: Record<Difficulty, number> = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
+
 // --- Subcomponents ---
 const TreeCategory = ({ 
     category, 
@@ -129,10 +85,10 @@ const TreeCategory = ({
     category: CategoryNode, 
     activeTopicId: string | null, 
     activeCardId: string | null,
-    onSelectTopic: (id: string, catTitle: string) => void,
-    onSelectCard: (id: string, parentContext: string) => void,
+    onSelectTopic: (id: string, catTitle: string, categoryId: string) => void,
+    onSelectCard: (id: string, parentContext: string, categoryId: string, topicId: string | null) => void,
     onAddTopic: (categoryId: string, catTitle: string) => void,
-    onAddTopicCard: (topicId: string, topicTitle: string) => void,
+    onAddTopicCard: (topicId: string, topicTitle: string, categoryId: string) => void,
     onAddCategoryCard: (categoryId: string, catTitle: string) => void,
 }) => {
     const [expanded, setExpanded] = useState(true);
@@ -147,7 +103,6 @@ const TreeCategory = ({
                     <span className="text-lg flex-shrink-0">🗂️</span>
                     <span className="truncate">{category.title}</span>
                 </div>
-                {/* Dual Hover Action Group for Category */}
                 <div className="flex opacity-0 group-hover:opacity-100 transition-all ml-2 gap-1 bg-white shadow-sm border border-slate-200 rounded p-[2px]">
                     <button 
                         onClick={(e) => { e.stopPropagation(); onAddCategoryCard(category.id, category.title); }} 
@@ -174,26 +129,25 @@ const TreeCategory = ({
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden pl-6 mt-1"
                     >
-                        {/* 1. Topics rendering */}
                         {category.topics.map(topic => (
                             <TreeTopic 
                                 key={topic.id} 
                                 topic={topic} 
                                 isActive={activeTopicId === topic.id}
                                 activeCardId={activeCardId}
+                                categoryId={category.id}
                                 categoryTitle={category.title}
-                                onSelect={() => onSelectTopic(topic.id, category.title)}
+                                onSelect={() => onSelectTopic(topic.id, category.title, category.id)}
                                 onSelectCard={onSelectCard}
                                 onAddTopicCard={onAddTopicCard}
                             />
                         ))}
 
-                        {/* 2. Discrete Cards rendering */}
                         <div className="space-y-1 mt-1 mb-2 relative before:content-[''] before:absolute before:left-3 before:top-0 before:bottom-0 before:w-px before:bg-slate-200">
                             {category.cards.map(card => (
                                 <div 
                                     key={card.id}
-                                    onClick={(e) => { e.stopPropagation(); onSelectCard(card.id, `🗂️ ${category.title} / 独立知识点`); }}
+                                    onClick={(e) => { e.stopPropagation(); onSelectCard(card.id, `🗂️ ${category.title} / 独立知识点`, category.id, null); }}
                                     className={`flex items-center gap-2 px-3 py-1.5 ml-3 rounded-lg text-sm cursor-pointer transition-colors relative z-10
                                         ${activeCardId === card.id ? 'bg-white shadow-sm ring-1 ring-blue-200/60 text-blue-800 font-bold' : 'text-slate-500 hover:bg-slate-200/50'}
                                     `}
@@ -218,6 +172,7 @@ const TreeTopic = ({
     topic, 
     isActive, 
     activeCardId,
+    categoryId,
     categoryTitle,
     onSelect, 
     onSelectCard,
@@ -226,10 +181,11 @@ const TreeTopic = ({
     topic: TopicNode, 
     isActive: boolean;
     activeCardId: string | null;
+    categoryId: string;
     categoryTitle: string;
     onSelect: () => void;
-    onSelectCard: (id: string, parentContext: string) => void;
-    onAddTopicCard: (topicId: string, topicTitle: string) => void;
+    onSelectCard: (id: string, parentContext: string, categoryId: string, topicId: string | null) => void;
+    onAddTopicCard: (topicId: string, topicTitle: string, categoryId: string) => void;
 }) => {
     return (
         <div className="mb-1">
@@ -242,7 +198,7 @@ const TreeTopic = ({
                 </div>
                 <div className="flex opacity-0 group-hover:opacity-100 transition-all ml-2 bg-white shadow-sm border border-slate-200 rounded p-[2px]">
                     <button 
-                        onClick={(e) => { e.stopPropagation(); onAddTopicCard(topic.id, topic.title); }} 
+                        onClick={(e) => { e.stopPropagation(); onAddTopicCard(topic.id, topic.title, categoryId); }} 
                         className={`w-6 h-6 flex items-center justify-center hover:bg-slate-100 rounded transition-all text-xs
                             ${isActive ? 'text-indigo-500' : 'text-slate-400 hover:text-indigo-600'}
                         `}
@@ -262,7 +218,7 @@ const TreeTopic = ({
                     {topic.cards.map(card => (
                         <div 
                             key={card.id}
-                            onClick={(e) => { e.stopPropagation(); onSelectCard(card.id, ` 🗺️ ${topic.title} / 关卡节点`); }}
+                            onClick={(e) => { e.stopPropagation(); onSelectCard(card.id, ` 🗺️ ${topic.title} / 关卡节点`, categoryId, topic.id); }}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors relative z-10
                                 ${activeCardId === card.id ? 'bg-white shadow-sm ring-1 ring-indigo-200/60 text-indigo-800 font-bold' : 'text-slate-500 hover:bg-slate-200/50'}
                             `}
@@ -285,21 +241,64 @@ const AdminStudio: React.FC = () => {
     const navigate = useNavigate();
     
     // UI State
-    const [activeTopicId, setActiveTopicId] = useState<string | null>('t1');
-    const [activeCardId, setActiveCardId] = useState<string | null>('cd1');
-    const [editorContext, setEditorContext] = useState<string>('📍 位于: 🗺️ 二叉树核心套路 / 关卡节点');
+    const [treeData, setTreeData] = useState<CategoryNode[]>([]);
+    const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+    const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
+    const [activeCardId, setActiveCardId] = useState<string | null>(null);
+    const [editorContext, setEditorContext] = useState<string>('📍 请选择或创建节点');
     
     // Editor State
-    const [editorType, setEditorType] = useState<CardType>('algorithm');
-    const [editorTitle, setEditorTitle] = useState('二叉树的层序遍历');
+    const [editorType, setEditorType] = useState<CardType>('concept');
+    const [editorTitle, setEditorTitle] = useState('');
     const [editorDifficulty, setEditorDifficulty] = useState<Difficulty>('Medium');
-    const [editorContent, setEditorContent] = useState('给你二叉树的根节点...');
-    const [editorQuestion, setEditorQuestion] = useState('');
+    const [editorContent, setEditorContent] = useState('');
     const [editorAnswer, setEditorAnswer] = useState('');
 
     const [viewMode, setViewMode] = useState<ViewMode>('edit');
+
+    const fetchTreeData = async () => {
+        try {
+            const res: any = await request.get('/studio/tree');
+            if (res.code === 200 && Array.isArray(res.data)) {
+                const mappedData = res.data.map((cat: any) => ({
+                    id: String(cat.ID),
+                    title: cat.name,
+                    topics: (cat.topics || []).map((t: any) => ({
+                        id: String(t.ID),
+                        title: t.name,
+                        cards: (t.cards || []).map((c: any) => ({
+                            id: String(c.ID),
+                            title: c.title,
+                            type: c.card_type,
+                            content: c.content,
+                            question: c.content, 
+                            answer: c.answer,
+                            difficulty: diffMaper[c.difficulty] || 'Medium'
+                        }))
+                    })),
+                    cards: (cat.cards || []).map((c: any) => ({
+                            id: String(c.ID),
+                            title: c.title,
+                            type: c.card_type,
+                            content: c.content,
+                            question: c.content,
+                            answer: c.answer,
+                            difficulty: diffMaper[c.difficulty] || 'Medium'
+                    }))
+                }));
+                setTreeData(mappedData);
+            }
+        } catch (err) {
+            console.error("Failed to fetch tree data", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchTreeData();
+    }, []);
     
     const handleAddCategory = () => {
+        setActiveCategoryId(null);
         setActiveTopicId(null);
         setActiveCardId('new-category');
         setEditorContext(`📍 正在创建: 全局新大类 (Category)`);
@@ -310,7 +309,8 @@ const AdminStudio: React.FC = () => {
     };
 
     const handleAddTopic = (categoryId: string, catTitle: string) => {
-        setActiveTopicId(categoryId);
+        setActiveCategoryId(categoryId);
+        setActiveTopicId(null);
         setActiveCardId('new-topic');
         setEditorContext(`📍 正在创建: 🗂️ ${catTitle} 内的新路线图`);
         setEditorTitle('');
@@ -319,7 +319,8 @@ const AdminStudio: React.FC = () => {
         setViewMode('edit');
     };
 
-    const handleAddTopicCard = (topicId: string, topicTitle: string) => {
+    const handleAddTopicCard = (topicId: string, topicTitle: string, categoryId: string) => {
+        setActiveCategoryId(categoryId);
         setActiveTopicId(topicId);
         setActiveCardId('new');
         setEditorContext(`📍 正在创建: 🗺️ ${topicTitle} 的关卡节点`);
@@ -327,6 +328,7 @@ const AdminStudio: React.FC = () => {
     };
 
     const handleAddCategoryCard = (categoryId: string, catTitle: string) => {
+        setActiveCategoryId(categoryId);
         setActiveTopicId(null);
         setActiveCardId('new');
         setEditorContext(`📍 正在创建: 🗂️ ${catTitle} 的独立知识点`);
@@ -337,29 +339,26 @@ const AdminStudio: React.FC = () => {
         setEditorTitle('');
         setEditorType('concept');
         setEditorContent('');
-        setEditorQuestion('');
         setEditorAnswer('');
         setViewMode('edit');
+        setEditorDifficulty('Medium');
     };
 
-    const handleSelectCard = (cardId: string, parentContext: string) => {
+    const handleSelectCard = (cardId: string, parentContext: string, categoryId: string, topicId: string | null) => {
+        setActiveCategoryId(categoryId);
         setActiveCardId(cardId);
+        setActiveTopicId(topicId);
         setEditorContext(`📍 位于: ${parentContext}`);
         
-        for (const cat of mockTreeData) {
-            // Check Discrete Cards
+        for (const cat of treeData) {
             const discreteFound = cat.cards.find(c => c.id === cardId);
             if (discreteFound) {
-                setActiveTopicId(null);
                 populateEditor(discreteFound);
                 return;
             }
-
-            // Check Topic Cards
             for (const t of cat.topics) {
                 const found = t.cards.find(c => c.id === cardId);
                 if (found) {
-                    setActiveTopicId(t.id);
                     populateEditor(found);
                     return;
                 }
@@ -371,9 +370,49 @@ const AdminStudio: React.FC = () => {
         setEditorType(found.type);
         setEditorTitle(found.title);
         if (found.difficulty) setEditorDifficulty(found.difficulty);
-        setEditorContent(found.content || '');
-        setEditorQuestion(found.question || '');
+        setEditorContent(found.content || found.question || '');
         setEditorAnswer(found.answer || '');
+    };
+
+    const handleSave = async () => {
+        try {
+            if (activeCardId === 'new-category') {
+                await request.post('/studio/categories', { name: editorTitle });
+                alert("创建大类成功");
+            } else if (activeCardId === 'new-topic') {
+                if (!activeCategoryId) return alert("Missing category state");
+                await request.post('/studio/topics', { name: editorTitle, category_id: Number(activeCategoryId) });
+                alert("创建路线图成功");
+            } else if (activeCardId === 'new') {
+                if (!activeCategoryId) return alert("Missing category state");
+                await request.post('/studio/cards', {
+                    title: editorTitle,
+                    card_type: editorType,
+                    content: editorContent,
+                    answer: editorAnswer,
+                    difficulty: diffRevMaper[editorDifficulty],
+                    category_id: Number(activeCategoryId),
+                    topic_id: activeTopicId ? Number(activeTopicId) : null
+                });
+                alert("创建卡片成功");
+            } else if (activeCardId && activeCardId !== 'new' && activeCardId !== 'new-category' && activeCardId !== 'new-topic') {
+                // Update Card
+                await request.put(`/studio/cards/${activeCardId}`, {
+                    title: editorTitle,
+                    card_type: editorType,
+                    content: editorContent,
+                    answer: editorAnswer,
+                    difficulty: diffRevMaper[editorDifficulty]
+                });
+                alert("更新卡片成功");
+            }
+            // Refresh Tree
+            await fetchTreeData();
+            // Clear or keep active logic
+        } catch (error) {
+            console.error("Failed to save", error);
+            alert("保存失败，请检查控制台");
+        }
     };
 
     return (
@@ -399,13 +438,13 @@ const AdminStudio: React.FC = () => {
 
                 {/* Tree Content */}
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                    {mockTreeData.map(category => (
+                    {treeData.map(category => (
                         <TreeCategory 
                             key={category.id} 
                             category={category}
                             activeTopicId={activeTopicId}
                             activeCardId={activeCardId}
-                            onSelectTopic={(id) => setActiveTopicId(id)}
+                            onSelectTopic={(id, title, catId) => { setActiveTopicId(id); setActiveCategoryId(catId); }}
                             onSelectCard={handleSelectCard}
                             onAddTopic={handleAddTopic}
                             onAddTopicCard={handleAddTopicCard}
@@ -421,7 +460,7 @@ const AdminStudio: React.FC = () => {
                 <div className="h-20 border-b border-slate-100 flex items-center justify-between px-10 flex-shrink-0 bg-white z-10">
                     <div>
                         <span className="text-xs font-bold text-slate-400 tracking-wider">
-                            {activeCardId === 'new' ? '✨ 创建新突触' : '📝 编辑突触'}
+                            {!activeCardId ? '🚀 请点击左侧节点' : activeCardId.startsWith('new') ? '✨ 创建新模块' : '📝 编辑模块'}
                         </span>
                         <div className="text-xs mt-1 text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md w-max border border-slate-200/60">
                             {editorContext}
@@ -454,7 +493,7 @@ const AdminStudio: React.FC = () => {
                 </div>
 
                 {/* Dynamic Editor Area */}
-                <div className="flex-1 overflow-y-auto px-10 py-12 custom-scrollbar focus-within:bg-slate-50/30 transition-colors">
+                {activeCardId ? <div className="flex-1 overflow-y-auto px-10 py-12 custom-scrollbar focus-within:bg-slate-50/30 transition-colors">
                     <div className="max-w-4xl mx-auto space-y-10 pb-32">
                         {/* Title (Common) */}
                         <div>
@@ -550,8 +589,8 @@ const AdminStudio: React.FC = () => {
                                                     <div>
                                                         <label className="block text-sm font-bold text-slate-400 mb-2">Q: 问题正文 (Front)</label>
                                                         <textarea
-                                                            value={editorQuestion}
-                                                            onChange={(e) => setEditorQuestion(e.target.value)}
+                                                            value={editorContent}
+                                                            onChange={(e) => setEditorContent(e.target.value)}
                                                             className="w-full h-24 bg-transparent resize-y outline-none focus:ring-0 text-slate-800 font-mono text-lg font-bold leading-relaxed placeholder:text-slate-300 border-b border-slate-100"
                                                             placeholder="背诵提问..."
                                                         />
@@ -600,7 +639,7 @@ const AdminStudio: React.FC = () => {
                                                 <div className="space-y-6">
                                                     <div className="p-4 bg-white border border-slate-200 shadow-sm rounded-xl">
                                                         <span className="text-amber-500 font-black mr-2">Q.</span>
-                                                        <span className="font-bold text-slate-800">{editorQuestion || <span className="text-slate-300 italic">请输入问题</span>}</span>
+                                                        <span className="font-bold text-slate-800">{editorContent || <span className="text-slate-300 italic">请输入问题</span>}</span>
                                                     </div>
                                                     <div className="p-4 bg-slate-100 border border-slate-200 rounded-xl relative">
                                                         <div className="absolute top-0 right-0 p-2 text-[10px] text-slate-400 font-bold tracking-widest uppercase">Answers Revealed</div>
@@ -616,19 +655,19 @@ const AdminStudio: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> : <div className="flex-1 flex items-center justify-center bg-slate-50"><span className="text-slate-400">点击左侧目录进行操作</span></div>}
 
                 {/* Bottom Action Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
+                {activeCardId && <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
                     <div className="max-w-4xl mx-auto flex justify-end gap-4 pointer-events-auto">
                         <button className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all flex items-center gap-2">
                             <CloseOutlined /> 取消修改
                         </button>
-                        <button className="px-8 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all active:scale-95 flex items-center gap-2">
+                        <button onClick={handleSave} className="px-8 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/30 transition-all active:scale-95 flex items-center gap-2">
                             <SaveOutlined /> 💾 保存{editorType === 'category' ? '分类' : editorType === 'topic' ? '路线图' : '知识碎片'}
                         </button>
                     </div>
-                </div>
+                </div>}
             </div>
         </div>
     );

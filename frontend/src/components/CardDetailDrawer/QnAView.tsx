@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MdPreview } from 'md-editor-rt';
+import 'md-editor-rt/lib/preview.css';
 
 export const QnAView = ({ card }: { card: any }) => {
     const [isFlipped, setIsFlipped] = useState(false);
@@ -10,9 +12,9 @@ export const QnAView = ({ card }: { card: any }) => {
                 {/* Question Box */}
                 <div className="w-full max-w-lg bg-white p-10 rounded-3xl shadow-sm border border-slate-200 text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-400" />
-                    <h2 className="text-2xl font-extrabold text-slate-800 leading-relaxed">
-                        {card.question || "对于二叉树的递归算法，为什么说它的空间复杂度不仅仅是 O(1)，就算没有申请额外的数组，它通常是多少？"}
-                    </h2>
+                    <div className="text-xl font-extrabold text-slate-800 leading-relaxed text-left">
+                        <MdPreview modelValue={card.question || card.content || "暂无题目"} editorId={`qna-q-${card.id}`} />
+                    </div>
                 </div>
 
                 {/* Answer Box (Behind flip) */}
@@ -37,10 +39,8 @@ export const QnAView = ({ card }: { card: any }) => {
                             className="w-full max-w-lg bg-indigo-50 p-8 rounded-3xl border border-indigo-100 shadow-inner"
                         >
                             <h4 className="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-4 inline-block border-b-2 border-indigo-200 pb-1">参考答案</h4>
-                            <div className="prose prose-indigo prose-lg text-slate-700">
-                                <p>
-                                    {card.answer || "哪怕没有申请额外的数据结构，递归调用本身会占用 **系统调用栈 (Call Stack)** 的空间。在最坏的情况下（比如树退化成了链表），递归深度达到 N，空间复杂度就是 O(N)。在平衡二叉树的情况下，深度为 logN，空间复杂度为 O(logN)。因此一般可以说空间复杂度是 O(h)，其中 h 是树的高度。"}
-                                </p>
+                            <div className="text-left w-full">
+                                <MdPreview modelValue={card.answer || "暂无答案"} editorId={`qna-a-${card.id}`} />
                             </div>
                         </motion.div>
                     )}

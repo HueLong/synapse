@@ -8,12 +8,12 @@ import (
 )
 
 type StatsHandler struct {
-	svc *service.QuestionService
+	svc *service.CardService
 }
 
 func NewStatsHandler() *StatsHandler {
 	return &StatsHandler{
-		svc: &service.QuestionService{},
+		svc: &service.CardService{},
 	}
 }
 
